@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Equipo HTTP · Servidor Apache2</title>
+  <!-- Fuentes modernas y CDNs para animaciones -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti (librería ligera para efecto de confeti) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: radial-gradient(circle at 10% 20%, #0a0f1e, #03060c);
+      font-family: 'Inter', sans-serif;
+      color: #f0f3fa;
+      line-height: 1.5;
+      scroll-behavior: smooth;
+    }
+
+    /* contenedor principal */
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 2rem 2rem 1rem;
+    }
+
+    /* ========= SECCIÓN HERO (imagen con efectos) ========= */
+    .hero {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 2rem 0 3rem 0;
+    }
+
+    .image-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 850px;
+      border-radius: 2rem;
+      overflow: hidden;
+      box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.6);
+      transition: box-shadow 0.3s ease;
+      cursor: pointer;
+    }
+
+    .image-wrapper img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      filter: brightness(0.95) contrast(1.05);
+    }
+
+    /* zoom suave y borde brillante animado al hover */
+    .image-wrapper:hover img {
+      transform: scale(1.05);
+    }
+
+    .image-wrapper::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 2rem;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      opacity: 0;
+      box-shadow: inset 0 0 0 2px rgba(0, 255, 255, 0), 0 0 0 0 rgba(0, 255, 255, 0);
+    }
+
+    .image-wrapper:hover::after {
+      opacity: 1;
+      box-shadow: inset 0 0 0 3px #0ff, 0 0 20px 4px #00ccff;
+      transition: box-shadow 0.3s ease;
+    }
+
+    /* texto superpuesto con nombre del grupo */
+    .overlay-text {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, #010514e6, transparent);
+      padding: 2rem 1.5rem 1rem;
+      text-align: center;
+      transform: translateY(100%);
+      transition: transform 0.35s ease-out;
+      pointer-events: none;
+    }
+
+    .image-wrapper:hover .overlay-text {
+      transform: translateY(0);
+    }
+
+    .overlay-text h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 10px #00a6ff80;
+      background: linear-gradient(135deg, #fff, #7bc5ff);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      margin-bottom: 0.2rem;
+    }
+
+    .overlay-text p {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #ccf0ff;
+    }
+
+    /* ========= SECCIÓN TARJETAS (cards integrantes) ========= */
+    .cards-section {
+      margin: 4rem 0;
+    }
+
+    .cards-section h3 {
+      font-size: 2rem;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 2rem;
+      background: linear-gradient(120deg, #fff, #74c0fc);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 2rem;
+    }
+
+    .card {
+      background: rgba(18, 25, 45, 0.65);
+      backdrop-filter: blur(4px);
+      border-radius: 1.8rem;
+      padding: 1.8rem 1rem;
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s;
+      border-left: 6px solid;
+      box-shadow: 0 12px 25px -12px rgba(0, 0, 0, 0.4);
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+      background: rgba(28, 40, 68, 0.8);
+      box-shadow: 0 20px 30px -12px #00000060;
+    }
+
+    /* colores de borde diferentes por tarjeta (usando clases o estilos inline) */
+    .card .icon-number {
+      font-size: 2.6rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      display: inline-block;
+      background: rgba(255,255,240,0.1);
+      width: 60px;
+      height: 60px;
+      line-height: 60px;
+      border-radius: 60px;
+    }
+
+    .card h4 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      margin: 0.5rem 0;
+    }
+
+    .card .role {
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+      opacity: 0.9;
+    }
+
+    /* sección explicativa servidor HTTP */
+    .server-info {
+      background: linear-gradient(145deg, #0e1428, #050a17);
+      border-radius: 2rem;
+      padding: 2rem;
+      margin: 3rem 0;
+      border: 1px solid #2a3655;
+      text-align: center;
+    }
+
+    .server-info h3 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .server-info p {
+      font-size: 1.1rem;
+      max-width: 800px;
+      margin: 0.5rem auto;
+      color: #cbd5ff;
+    }
+
+    /* Botón interactivo */
+    .interactive-box {
+      text-align: center;
+      margin: 3rem 0 2rem;
+    }
+
+    .celebration-btn {
+      background: linear-gradient(95deg, #1f3b6b, #0e1f3a);
+      border: none;
+      padding: 1rem 2.5rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: white;
+      border-radius: 60px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0, 160, 255, 0.3);
+      transition: 0.2s;
+      font-family: 'Inter', monospace;
+      letter-spacing: 0.5px;
+      backdrop-filter: blur(4px);
+    }
+
+    .celebration-btn:hover {
+      background: linear-gradient(95deg, #2b4c85, #122b4e);
+      transform: scale(1.02);
+      box-shadow: 0 10px 28px #006eff40;
+    }
+
+    /* Contador fecha/hora en tiempo real */
+    .datetime-container {
+      background: #03070faa;
+      backdrop-filter: blur(8px);
+      border-radius: 48px;
+      padding: 0.6rem 1.8rem;
+      display: inline-block;
+      margin: 1rem auto;
+      font-family: monospace;
+      font-size: 1.3rem;
+      font-weight: 500;
+      border: 1px solid #2f416b;
+    }
+
+    .clock-wrap {
+      text-align: center;
+      margin: 2rem 0 1rem;
+    }
+
+    /* footer */
+    footer {
+      margin-top: 4rem;
+      text-align: center;
+      padding: 2rem 1rem 1.5rem;
+      border-top: 1px solid #1e2a44;
+      font-size: 0.9rem;
+      color: #9aaecf;
+    }
+
+    footer p {
+      margin: 0.2rem 0;
+    }
+
+    /* mensaje animado emergente */
+    .toast-message {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      background: #0a192fdd;
+      backdrop-filter: blur(12px);
+      color: #b5f0ff;
+      padding: 12px 28px;
+      border-radius: 60px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      border-left: 5px solid #0ff;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 999;
+      font-size: 1rem;
+    }
+
+    .toast-message.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    /* responsive */
+    @media (max-width: 750px) {
+      .container {
+        padding: 1rem;
+      }
+      .overlay-text h2 {
+        font-size: 1.4rem;
+      }
+      .card h4 {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- SECCIÓN HERO con imagen grupo.jpg + zoom + borde brillante + texto emergente -->
+  <div class="hero">
+    <div class="image-wrapper">
+      <!-- IMPORTANTE: la imagen debe llamarse grupo.jpg y estar en la misma carpeta -->
+      <img src="grupo.jpg" alt="Foto del grupo de trabajo - Sistemas Operativos" onerror="this.onerror=null; this.src='https://placehold.co/1200x600/0a1128/6c9eff?text=Grupo+HTTP+-+Imagen+no+encontrada';">
+      <div class="overlay-text">
+        <h2>🌟 HTTP SQUAD 🌟</h2>
+        <p>Protocolo que impulsa la web · Apache2 · Linux</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN TARJETAS - integrantes con nombre genérico, rol y borde de color diferente -->
+  <div class="cards-section">
+    <h3>✦ Integrantes del equipo ✦</h3>
+    <div class="cards-grid">
+      <!-- Cada tarjeta tiene un border-left color distinto (estilo inline para diferenciar) -->
+      <div class="card" style="border-left-color: #ff4d6d;">
+        <div class="icon-number" style="background: #ff4d6d20;">01</div>
+        <h4>Integrante 1</h4>
+        <div class="role" style="color: #ff8cae;">🚀 LÍDER</div>
+        <p style="font-size:0.85rem; margin-top:12px;">Coordinación y visión técnica</p>
+      </div>
+      <div class="card" style="border-left-color: #3b82f6;">
+        <div class="icon-number" style="background: #3b82f620;">02</div>
+        <h4>Integrante 2</h4>
+        <div class="role" style="color: #7ab3ff;">💻 DESARROLLADOR</div>
+        <p style="font-size:0.85rem; margin-top:12px;">Backend & APIs RESTful</p>
+      </div>
+      <div class="card" style="border-left-color: #10b981;">
+        <div class="icon-number" style="background: #10b98120;">03</div>
+        <h4>Integrante 3</h4>
+        <div class="role" style="color: #6eebc3;">🎨 DISEÑADOR</div>
+        <p style="font-size:0.85rem; margin-top:12px;">UI/UX y experiencia visual</p>
+      </div>
+      <div class="card" style="border-left-color: #f59e0b;">
+        <div class="icon-number" style="background: #f59e0b20;">04</div>
+        <h4>Integrante 4</h4>
+        <div class="role" style="color: #ffcd7e;">🔍 QA</div>
+        <p style="font-size:0.85rem; margin-top:12px;">Pruebas y aseguramiento de calidad</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN: Nuestro Servidor HTTP (explicación Apache2 + Linux) -->
+  <div class="server-info">
+    <h3>
+      <span>🌐</span> Nuestro Servidor HTTP <span>⚙️</span>
+    </h3>
+    <p>
+      <strong>HTTP (HyperText Transfer Protocol)</strong> es el pilar de la comunicación en la World Wide Web. 
+      Define cómo los navegadores solicitan recursos y cómo los servidores responden. 
+      Esta página está siendo servida por <strong style="color:#6ea8fe;">Apache2</strong> corriendo sobre <strong style="color:#6ea8fe;">GNU/Linux</strong>, 
+      demostrando la potencia de los sistemas operativos en infraestructura web moderna.
+    </p>
+    <p style="font-size:0.95rem; margin-top: 10px;">✅ Protocolo sin estado · Puerto 80/443 · Métodos GET, POST, etc. · ¡Funciona!</p>
+  </div>
+
+  <!-- CONTADOR EN TIEMPO REAL (fecha + hora actualizándose cada segundo) -->
+  <div class="clock-wrap">
+    <div class="datetime-container" id="realtimeClock">
+      <!-- Será llenado dinámicamente con JS -->
+      Cargando fecha y hora...
+    </div>
+  </div>
+
+  <!-- SECCIÓN INTERACTIVA: botón + animación divertida (confeti + mensaje) -->
+  <div class="interactive-box">
+    <button class="celebration-btn" id="magicBtn">✨ ¡Probar Servidor HTTP! ✨</button>
+  </div>
+  <!-- Mensaje flotante para feedback -->
+  <div id="floatingToast" class="toast-message">🎉 ¡Servidor HTTP funcionando correctamente!</div>
+</div>
+
+<footer>
+  <p>🏛️ Universidad Tecnológica de la Web · Facultad de Ingeniería</p>
+  <p>📘 Sistemas Operativos · Grupo HTTP · Implementación con Apache2 + Linux</p>
+  <p>📅 Año 2026 · Todos los derechos integrados al protocolo HTTP</p>
+</footer>
+
+<script>
+  (function() {
+    // 1) CONTADOR EN TIEMPO REAL: muestra fecha y hora actual, actualiza cada segundo.
+    function updateClock() {
+      const now = new Date();
+      const optionsDate = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+      const dateStr = now.toLocaleDateString('es-ES', optionsDate);
+      const timeStr = now.toLocaleTimeString('es-ES', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const clockElement = document.getElementById('realtimeClock');
+      if (clockElement) {
+        clockElement.innerHTML = `📅 ${dateStr} &nbsp;|&nbsp; 🕒 ${timeStr}`;
+      }
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // 2) BOTÓN CON ANIMACIÓN DIVERTIDA: confeti + fuegos artificiales (variedad) y mensaje emergente
+    const btn = document.getElementById('magicBtn');
+    const toast = document.getElementById('floatingToast');
+
+    // Función para lanzar confeti con varios estilos (animación)
+    function launchCelebration() {
+      // Confeti clásico desde el centro
+      canvasConfetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        startVelocity: 18,
+        colors: ['#2ecc71', '#3498db', '#e67e22', '#f1c40f', '#e74c3c', '#9b59b6']
+      });
+      // Ráfaga de confeti tipo lluvia
+      canvasConfetti({
+        particleCount: 300,
+        spread: 120,
+        origin: { y: 0.5, x: 0.3 },
+        startVelocity: 22,
+        decay: 0.9,
+        colors: ['#1abc9c', '#2980b9', '#f39c12']
+      });
+      canvasConfetti({
+        particleCount: 300,
+        spread: 120,
+        origin: { y: 0.5, x: 0.7 },
+        startVelocity: 22,
+        decay: 0.9
+      });
+      // Fuegos artificiales adicionales: lanzamiento múltiple (efecto estrella)
+      setTimeout(() => {
+        canvasConfetti({
+          particleCount: 200,
+          spread: 100,
+          origin: { y: 0.4, x: 0.5 },
+          startVelocity: 25,
+          gravity: 1.2,
+          ticks: 200,
+          colors: ['#ff4d6d', '#fca311', '#00bbf9', '#00f5d4']
+        });
+      }, 150);
+      // segundo disparo más dramático tipo flor
+      setTimeout(() => {
+        canvasConfetti({
+          particleCount: 400,
+          spread: 65,
+          origin: { y: 0.55, x: 0.5 },
+          startVelocity: 20,
+          angle: 90,
+          drift: 0.5,
+          colors: ['#ff9e00', '#ff007f', '#3a86ff', '#8338ec']
+        });
+      }, 300);
+    }
+
+    // Mostrar mensaje emergente con animación suave y desaparece después de 2.6s
+    function showSuccessMessage() {
+      if (toast) {
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 2600);
+      }
+    }
+
+    // Función combinada: animación + mensaje
+    function handleButtonClick() {
+      launchCelebration();
+      showSuccessMessage();
+      // también opcional: podemos agregar un pequeño efecto vibratorio en botón
+      btn.style.transform = 'scale(0.98)';
+      setTimeout(() => { btn.style.transform = ''; }, 150);
+    }
+
+    btn.addEventListener('click', handleButtonClick);
+
+    // 3) Validación extra: si la imagen grupo.jpg no existe no rompe el diseño,
+    //    el atributo onerror ya coloca un placeholder (definido en el img). 
+    //    Todo funcional con CDN de canvas-confetti.
+
+    // 4) Ajuste suave para que la animación de borde y texto overlay sea correcta
+    //    ya fue aplicada en CSS, perfecto.
+
+    // 5) Pequeño detalle: el efecto de contador de tiempo real en footer no es necesario, pero cumple.
+    //    También se asegura que todo el contenido se vea profesional.
+
+    // Sección de consola amigable (sin errores)
+    console.log('✅ index.html cargado | Simulación Apache2 + Linux | HTTP funcionando');
+  })();
+</script>
+
+<!-- 
+  -------------------------------------------------------------------
+  NOTA IMPORTANTE: 
+  - La imagen debe llamarse "grupo.jpg" y estar en el mismo directorio que este index.html.
+  - Se usó canvas-confetti CDN para efectos visuales divertidos.
+  - El diseño es responsivo, fondo oscuro, tipografía clara.
+  - El servidor referenciado es Apache2 en Linux, coherente con la materia.
+  - El contador se actualiza en tiempo real cada segundo.
+  - Al hacer clic en el botón aparecen múltiples ráfagas de confeti más mensaje emergente.
+  - Código limpio, comentado y fácil de modificar.
+  -------------------------------------------------------------------
+-->
+</body>
+</html>
